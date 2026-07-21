@@ -8,14 +8,15 @@ from paddleocr import PaddleOCR
 import numpy as np
 
 ocr = PaddleOCR(
-    text_recognition_model_name='PP-OCRv5_mobile_rec',  # ou PP-OCRv6 quando estável no seu ambiente
-    use_angle_cls=True,
-    lang='en',
-    det=False,       # você já entrega o recorte — não precisa do modelo de detecção
-    use_gpu=False,   # muda para True se confirmar GPU disponível depois
-    enable_mkldnn=True, #Quando true, pode dar problema no Colab.
+    text_detection_model_name="PP-OCRv5_mobile_det",            # Detecção: mantida ligada para tolerar recortes imperfeitos do YOLO
+    text_recognition_model_name="latin_PP-OCRv5_mobile_rec",    # ou PP-OCRv6 quando estável no seu ambiente
+    use_doc_orientation_classify=False,
+    use_doc_unwarping=True,                                     # Retificação de perspectiva: substitui deskew manual via OpenCV,
+    use_textline_orientation=False,                             # Orientação de linha (rotação 180°): desativado.
+    use_gpu=False,                                              # muda para True se confirmar GPU disponível depois
+    enable_mkldnn=False,                                        # Aceleração Intel/AMD: só ativa em produção (máquina física),
     show_log=False,
-    device = 'cpu' 
+    device = 'cpu'                                              # Hardware ainda não confirmado — CPU como baseline seguro e reprodutível em qualquer máquina
 )
 
 def read_plate(img: np.ndarray) -> tuple[str, float] | None:
