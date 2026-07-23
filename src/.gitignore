@@ -1,0 +1,67 @@
+# ── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ── Ambientes virtuais ──────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Testes e cobertura ──────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.tox/
+
+# ── PaddleOCR / modelos baixados ────────────────────────
+# Pesos são baixados automaticamente na primeira execução e
+# não devem ir para o repositório (arquivos grandes, binários).
+.paddleocr/
+*.pdmodel
+*.pdiparams
+*.pdiparams.info
+*.onnx
+*.pt
+*.pth
+*.weights
+
+# ── Dados de teste / imagens locais ─────────────────────
+# Recortes de placa usados em testes manuais não entram no repo
+# (podem conter dados sensíveis de veículos reais).
+*.jpg
+*.jpeg
+*.png
+!docs/**/*.png
+!docs/**/*.jpg
+
+# ── Variáveis de ambiente e segredos ────────────────────
+.env
+.env.*
+*.key
+
+# ── IDEs e editores ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Sistema operacional ──────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────
+*.log
+logs/
