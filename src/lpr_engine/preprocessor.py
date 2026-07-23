@@ -1,27 +1,55 @@
+"""
+Bloco A — Pré-processamento da imagem da placa antes do OCR.
+
+Recebe o recorte (numpy array BGR) vindo do módulo de detecção (YOLO)
+e prepara a imagem para maximizar a acurácia do PaddleOCR.
+"""
 import cv2
 import numpy as np
 
-def preprocess(img: np.ndarray) -> np.ndarray:
-    # A1 — Redimensionamento: garante altura mínima mantendo proporção
-    height, width = img.shape[:2]
-    if height < 60:
-        scale = 60 / height
-        img = cv2.resize(img, (int(width * scale), 60), interpolation=cv2.INTER_CUBIC)
+TARGET_HEIGHT = 64  # px — altura mínima recomendada para OCR de texto curto
 
-    # A2 — Deskew: corrige perspectiva se a placa vier inclinada
-    # (no MVP pode pular — só adicionar se o OCR errar muito em placas anguladas)
 
-    # A3 — Escala de cinza
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+def resize_plate(img: np.ndarray, target_height: int = TARGET_HEIGHT) -> np.ndarray:
+    """
+    Redimensiona a imagem para a altura mínima recomendada, preservando
+    o aspect ratio. Não reduz imagens que já estão acima do alvo.
+    """
+    h, w = img.shape[:2]
+    if h >= target_height:
+        return img
 
-    # A4 — CLAHE: normaliza contraste local (melhor que equalizeHist global)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
-    gray = clahe.apply(gray)
+    scale = target_height / h
+    new_w = max(1, int(w * scale))
+    return cv2.resize(img, (new_w, target_height), interpolation=cv2.INTER_CUBIC)
 
-    # A5 — Threshold adaptativo: binariza mesmo com iluminação desigual
-    binary = cv2.adaptiveThreshold(
+
+def to_grayscale(img: np.ndarray) -> np.ndarray:
+    """Converte BGR para escala de cinza. Idempotente se já vier em cinza."""
+    if img.ndim == 2:
+        return img
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+
+def apply_clahe(gray: np.ndarray, clip_limit: float = 2.0,
+                 tile_grid_size: tuple[int, int] = (4, 4)) -> np.ndarray:
+    """Normaliza contraste local — mais robusto que equalizeHist global."""
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+    return clahe.apply(gray)
+
+
+def binarize(gray: np.ndarray) -> np.ndarray:
+    """Binariza via threshold adaptativo — tolera iluminação desigual."""
+    return cv2.adaptiveThreshold(
         gray, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 15, 8
+        cv2.THRESH_BINARY, 15, 8,
     )
-    return binary
+
+
+def preprocess(img: np.ndarray) -> np.ndarray:
+    """Pipeline completo do Bloco A: resize -> cinza -> CLAHE -> threshold."""
+    resized = resize_plate(img)
+    gray = to_grayscale(resized)
+    enhanced = apply_clahe(gray)
+    return binarize(enhanced)

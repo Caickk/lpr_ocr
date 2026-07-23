@@ -1,44 +1,54 @@
+"""
+Bloco C — Pós-processamento: limpeza, correção de caracteres e validação
+da leitura bruta retornada pelo OCR contra os padrões de placa brasileiros.
+"""
 import re
 
-# Mapa de substituição para chars frequentemente confundidos
-# Aplicado por posição: letras esperadas nas pos. 0,1,2 e 4 (Mercosul)
-_DIGIT_TO_CHAR = str.maketrans('01589', 'OISBB')  # para posições de letra
-_CHAR_TO_DIGIT = str.maketrans('OISBQ', '01589')  # para posições de dígito
-
 PATTERN_MERCOSUL = re.compile(r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$')
-PATTERN_ANTIGO   = re.compile(r'^[A-Z]{3}[0-9]{4}$')
+PATTERN_ANTIGO = re.compile(r'^[A-Z]{3}[0-9]{4}$')
 
-def _fix_chars(text: str) -> str:
-    """Corrige confusão O/0, I/1, B/8 baseando-se na posição esperada."""
+# Correção por posição: dígito <-> letra, para os caracteres mais
+# frequentemente confundidos pelo OCR.
+_DIGIT_TO_CHAR = str.maketrans('01589', 'OISBB')
+_CHAR_TO_DIGIT = str.maketrans('OISBQ', '01589')
+
+_LETTER_POSITIONS = (0, 1, 2)   # sempre letras nos dois padrões
+_DIGIT_POSITIONS = (3, 5, 6)    # sempre dígitos nos dois padrões
+# posição 4 é ambígua (letra no Mercosul, dígito no padrão antigo) —
+# não forçamos correção nela, deixamos a regex decidir.
+
+
+def clean(raw: str) -> str:
+    """C1 — Remove espaços, hífens e normaliza para maiúsculas."""
+    return raw.upper().strip().replace(' ', '').replace('-', '')
+
+
+def fix_chars(text: str) -> str:
+    """C2 — Corrige confusão O/0, I/1, B/8, S/5 com base na posição esperada."""
     if len(text) != 7:
         return text
+
     chars = list(text)
-    # posições 0,1,2 devem ser letras
-    for i in range(3):
+    for i in _LETTER_POSITIONS:
         chars[i] = chars[i].translate(_DIGIT_TO_CHAR)
-    # posição 3 deve ser dígito
-    chars[3] = chars[3].translate(_CHAR_TO_DIGIT)
-    # posição 4: letra (Mercosul) ou dígito (antigo) — tenta Mercosul primeiro
-    # posições 5,6 devem ser dígitos
-    for i in range(5, 7):
+    for i in _DIGIT_POSITIONS:
         chars[i] = chars[i].translate(_CHAR_TO_DIGIT)
     return ''.join(chars)
 
+
 def validate(raw: str) -> tuple[str, str] | None:
     """
-    Retorna (placa_normalizada, padrão) ou None se inválida.
-    padrão: 'mercosul' | 'antigo'
+    C3 — Pipeline completo de validação.
+    Retorna (placa_normalizada, padrao) ou None se inválida.
+    padrao: 'mercosul' | 'antigo'
     """
-    # C1 — Limpeza
-    text = raw.upper().strip().replace(' ', '').replace('-', '')
+    text = clean(raw)
 
     if len(text) != 7:
         return None
 
-    # C2 — Correção de caracteres por posição
-    text = _fix_chars(text)
+    text = fix_chars(text)
 
-    # C3 — Validação por regex
     if PATTERN_MERCOSUL.match(text):
         return text, 'mercosul'
     if PATTERN_ANTIGO.match(text):
